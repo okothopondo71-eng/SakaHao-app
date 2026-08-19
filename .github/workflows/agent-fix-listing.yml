@@ -1,0 +1,58 @@
+name: Agent listing fix
+
+on:
+  push:
+    branches:
+      - agent/fix-post-listing
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply targeted fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/pages/PostListingPage.tsx')
+          text = path.read_text()
+
+          duplicate = '''  const freeListingsRemaining = Math.max(\n    0,\n    Number(\n      listingEntitlement?.free_listings_remaining ?? 0\n    )\n  );\n  \n  \n'''
+          if duplicate not in text:
+              raise SystemExit('Expected duplicate freeListingsRemaining block was not found')
+          text = text.replace(duplicate, '', 1)
+
+          marker = '''      paymentCompleted={\n        paymentCompleted\n      }\n\n      setPaymentCompleted={'''
+          replacement = '''      paymentCompleted={\n        paymentCompleted\n      }\n\n      paymentVerified={\n        paymentCompleted\n      }\n\n      setPaymentCompleted={'''
+          if marker not in text:
+              raise SystemExit('Expected payment prop marker was not found')
+          text = text.replace(marker, replacement, 1)
+
+          path.write_text(text)
+
+          # Keep the backend result naming aligned with the actual RPC response.
+          if "listingPaymentRequired:\n        listingResult.listing_payment_required ?? null" in text:
+              text = text.replace(
+                  "listingPaymentRequired:\n        listingResult.listing_payment_required ?? null",
+                  "listingPaymentRequired:\n        listingResult.payment_required ?? null",
+                  1,
+              )
+              path.write_text(text)
+
+      - name: Commit fixes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/pages/PostListingPage.tsx
+          git diff --cached --check
+          git diff --cached --quiet && exit 0 || true
+          git commit -m 'fix: repair listing page state and payment prop'
+          git push
