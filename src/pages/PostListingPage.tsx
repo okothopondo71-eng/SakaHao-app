@@ -1102,14 +1102,6 @@ export default function PostListingPage() {
   //
   // Never use FREE_LISTING_LIMIT directly here.
   // Use the authoritative entitlement returned by PostgreSQL.
-  const freeListingsRemaining = Math.max(
-    0,
-    Number(
-      listingEntitlement?.free_listings_remaining ?? 0
-    )
-  );
-  
-  
 
   useEffect(() => {
     // If payment is not required, there is nothing to pay.
@@ -2952,7 +2944,7 @@ useEffect(() => {
         listingResult.free_listings_used ?? null,
 
       listingPaymentRequired:
-        listingResult.listing_payment_required ?? null,
+        listingResult.payment_required ?? null,
 
       approvalStatus:
         listingResult.approval_status ?? null,
@@ -3388,6 +3380,10 @@ useEffect(() => {
       }
 
       paymentCompleted={
+        paymentCompleted
+      }
+
+      paymentVerified={
         paymentCompleted
       }
 
